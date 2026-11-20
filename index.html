@@ -825,7 +825,7 @@ function vReglages(c){
    +'<div class="card"><h3>Importer un relevé Revolut</h3><div class="small muted" style="margin:6px 0 12px">Exporte ton relevé en CSV depuis l\'app Revolut, puis importe-le ici : les dépenses sont classées toutes seules et les charges fixes rapprochées.</div><button class="btn" data-a="openImportCsv">Importer un relevé</button></div>'
    +'<div class="card"><h3>Réglages avancés</h3><form data-f="settings" style="margin-top:12px"><div class="field"><label for="s-seuilJour">Alerte orange : budget par jour sous (€)</label><input id="s-seuilJour" name="seuilJour" inputmode="decimal" value="'+String(s.seuilJour).replace('.',',')+'" required></div><div class="field"><label for="s-seuilCrise">Alerte rouge et mode fin de mois : sous (€)</label><input id="s-seuilCrise" name="seuilCrise" inputmode="decimal" value="'+String(s.seuilCrise).replace('.',',')+'" required></div><div class="field"><label for="s-budgetLoisirs">Plafond loisirs (0 = aucun)</label><input id="s-budgetLoisirs" name="budgetLoisirs" inputmode="decimal" value="'+String(s.budgetLoisirs).replace('.',',')+'" required></div><button class="btn primary" style="width:100%">Enregistrer</button></form></div></div>'
    +'<div class="stack"><div class="card"><h3>Nouveau mois</h3><div class="small muted" style="margin:4px 0 10px">Quand ton revenu est tombé : bilan du mois, nouvelle période, charges fixes recréées.</div><button class="btn" data-a="openIncome">Démarrer le nouveau mois</button></div>'
-   +accountCard()+'<div class="card"><h3>Sauvegarde</h3><div class="small muted" style="margin:4px 0 10px">'+(storageOK?'Tes données sont enregistrées automatiquement dans ce navigateur.':'Le stockage local est indisponible ici : exporte régulièrement ta sauvegarde.')+' Fais un export JSON de temps en temps.</div><div class="row"><button class="btn primary" data-a="openExport">Exporter</button><button class="btn" data-a="openImport">Importer</button></div></div>'
+   +accountCard()+applePayCard()+'<div class="card"><h3>Sauvegarde</h3><div class="small muted" style="margin:4px 0 10px">'+(storageOK?'Tes données sont enregistrées automatiquement dans ce navigateur.':'Le stockage local est indisponible ici : exporte régulièrement ta sauvegarde.')+' Fais un export JSON de temps en temps.</div><div class="row"><button class="btn primary" data-a="openExport">Exporter</button><button class="btn" data-a="openImport">Importer</button></div></div>'
    +'<div class="card"><h3>Données</h3><div class="small muted" style="margin:4px 0 10px">Tu peux tester l\'app avec des données fictives, ou tout effacer pour repartir de zéro.</div><div class="row"><button class="btn" data-a="resetDemo">Charger des données de démo</button><button class="btn danger" data-a="wipe">Tout effacer</button></div></div></div></div>';
 }
 
@@ -1080,6 +1080,48 @@ document.addEventListener('input',function(ev){
 /* ===== Compte et synchronisation (Supabase) ===== */
 function syncLabel(){return CLOUD.status==='ok'?'Synchronisé':CLOUD.status==='sync'?'Synchronisation…':CLOUD.status==='err'?'Non synchronisé (hors ligne ?)':'En attente'}
 function updateSync(){var e=document.getElementById('synclab');if(e){e.textContent=syncLabel();var d=document.getElementById('syncdot');if(d)d.className='syncdot '+(CLOUD.status||'')}}
+/* ===== Paiements Apple Pay (boîte de réception) : partagé appli + serveur ===== */
+function applyInbox(S,row,dateStr){
+  var amt=r2(Number(row.amount)),mer=String(row.merchant||'Apple Pay').slice(0,80),id='ap_'+row.id;
+  if(!(amt>0))return false;
+  if(S.depenses.some(function(e){return e.id===id||e.apId===row.id}))return false;
+  var m=null;
+  S.depenses.forEach(function(e){if(!m&&e.statut==='prevu'&&Math.abs(e.montant-amt)<0.01&&Math.abs(diffDays(e.date,dateStr))<=3)m=e});
+  if(m){m.statut='paye';m.apId=row.id;return true}
+  var dup=S.depenses.some(function(e){return e.auto&&e.statut==='paye'&&!e.apId&&Math.abs(e.montant-amt)<0.01&&Math.abs(diffDays(e.date,dateStr))<=1});
+  if(dup)return false;
+  var cat=guessCat(mer);
+  S.depenses.push({id:id,apId:row.id,nom:mer,montant:amt,cat:cat,date:dateStr,type:(cat==='alimentation'||cat==='essence'||cat==='santé')?'necessaire':'plaisir',statut:'paye',recurrent:false,source:'applepay'});
+  return true;
+}
+
+function applePayCard(){
+  if(!CLOUD.uid)return '';
+  return '<div class="card"><h3>Paiements Apple Pay</h3><div class="small muted" style="margin:6px 0 12px;line-height:1.6">Chaque paiement Apple Pay s\'ajoute tout seul à tes dépenses. Tu reçois une notification seulement si tu t\'approches du rouge (ou pour te féliciter en fin de mois). Rien n\'est envoyé d\'autre que le montant et le nom du commerçant.</div><div class="row"><button class="btn primary" data-a="mkKey">'+(localStorage.getItem('mp.keyMade.'+CLOUD.uid)?'Changer ma clé secrète':'Activer et créer ma clé secrète')+'</button></div></div>';
+}
+function hex(buf){return Array.prototype.map.call(new Uint8Array(buf),function(x){return ('0'+x.toString(16)).slice(-2)}).join('')}
+A.mkKey=function(){
+  var raw=new Uint8Array(32);crypto.getRandomValues(raw);var key='mp_'+hex(raw);
+  crypto.subtle.digest('SHA-256',new TextEncoder().encode(key)).then(function(h){
+    return CLOUD.client.from('moneypilot_tokens').upsert({user_id:CLOUD.uid,token_hash:hex(h)},{onConflict:'user_id'});
+  }).then(function(r){
+    if(r&&r.error){toast('Impossible de créer la clé');return}
+    try{localStorage.setItem('mp.keyMade.'+CLOUD.uid,'1')}catch(e){}
+    openModal('<h2 style="margin-bottom:10px">Ta clé secrète Apple Pay</h2><p class="small muted" style="margin:0 0 10px;line-height:1.6">Elle ne s\'affiche qu\'une seule fois : recopie-la maintenant dans le Raccourci de ton iPhone. Si tu la perds, crées-en une nouvelle (l\'ancienne cesse de marcher).</p><div class="field"><label>Clé secrète</label><textarea readonly id="k-key" rows="2" onclick="this.select()">'+key+'</textarea></div><div class="field"><label>Adresse (URL)</label><textarea readonly id="k-url" rows="2" onclick="this.select()">'+FNURL+'</textarea></div><div class="row" style="justify-content:flex-end"><button class="btn" data-a="closeModal">Fermer</button></div>');
+    render();
+  },function(){toast('Impossible de créer la clé')});
+};
+var FNURL='https://xjdcezrwauiojpkiwpwp.supabase.co/functions/v1/apple-pay';
+function processInbox(){
+  if(!CLOUD.uid||!CLOUD.readOk)return;
+  CLOUD.client.from('moneypilot_inbox').select('id,amount,merchant,paid_at').eq('processed',false).order('paid_at',{ascending:true}).then(function(r){
+    if(!r||r.error||!r.data||!r.data.length)return;
+    var ch=false,ids=[];
+    r.data.forEach(function(row){ids.push(row.id);if(applyInbox(state,row,ymd(new Date(row.paid_at))))ch=true});
+    var fin=function(){CLOUD.client.from('moneypilot_inbox').delete().in('id',ids).then(function(){},function(){})};
+    if(ch){save();render();toast(r.data.length+' paiement'+(r.data.length>1?'s':'')+' Apple Pay ajouté'+(r.data.length>1?'s':''));clearTimeout(CLOUD.timer);doPush().then(fin,fin)}else fin();
+  },function(){});
+}
 function accountCard(){
   if(!CLOUD.uid)return '';
   return '<div class="card"><h3>Mon compte</h3><div class="small muted" style="margin:6px 0 10px;line-height:1.7">Connecté : <b>'+esc(CLOUD.email)+'</b><br><span class="syncdot '+(CLOUD.status||'')+'" id="syncdot"></span><span id="synclab">'+syncLabel()+'</span><br>Tes données sont les mêmes sur tous tes appareils, et personne d\'autre ne peut les lire.</div><div class="row"><button class="btn" data-a="logout">Se déconnecter</button></div></div>';
@@ -1132,6 +1174,7 @@ function startUser(user){
     cacheLocal();CLOUD.status='ok';
     render();
     if(pushIt)doPush();
+    processInbox();
   }).catch(function(){
     if(loc){CLOUD.readOk=false;CLOUD.status='err';state=normalize(loc,true);ensureFixes();autoPay();render();toast('Hors ligne : tes données locales sont affichées')}
     else{var a2=authEl();a2.hidden=false;a2.innerHTML='<div class="authbox"><div class="card"><h2>Connexion impossible</h2><div class="small muted" style="margin:8px 0 14px">Je n\'arrive pas à joindre le serveur. Vérifie ta connexion internet.</div><button class="btn primary" data-a="retryBoot">Réessayer</button></div></div>'}
@@ -1148,7 +1191,7 @@ function boot(){
   CLOUD.client.auth.getSession().then(function(r){var s=r.data&&r.data.session;if(!s&&!CLOUD.recovery&&!CLOUD.uid)showAuth()});
   document.addEventListener('visibilitychange',function(){
     if(document.visibilityState!=='visible'||!CLOUD.uid||!CLOUD.readOk||CLOUD.timer||!$('#modal').hidden)return;
-    pullCloud().then(function(r){var cl=r.data&&valid(r.data.data)?r.data.data:null;if(cl&&(cl._ts||0)>(state._ts||0)){state=normalize(cl,true);ensureFixes();autoPay();cacheLocal();render()}}).catch(function(){});
+    pullCloud().then(function(r){var cl=r.data&&valid(r.data.data)?r.data.data:null;if(cl&&(cl._ts||0)>(state._ts||0)){state=normalize(cl,true);ensureFixes();autoPay();cacheLocal();render()}processInbox()}).catch(function(){});
   });
 }
 A.signup=function(d,btn){
