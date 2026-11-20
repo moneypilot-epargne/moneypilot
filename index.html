@@ -489,8 +489,8 @@ function setSolde(x){
 
 /* ===== UI ===== */
 var ui={view:'home',catTab:'cat',crmTab:'historique',filter:{q:'',cat:'',statut:'',mois:''},adv:{nom:'',prix:'',type:'plaisir',res:null},useSavings:false,pending:null};
-var ICONS={home:'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',dep:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',adv:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM16 8l-2 6-6 2 2-6z',obj:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',env:'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z',crm:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',fin:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',set:'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'};
-var VIEWS=[['home','Accueil','home'],['depenses','Dépenses','dep'],['conseiller','Conseiller','adv'],['objectifs','Objectifs','obj'],['envies','Envies','env'],['crm','Suivi','crm'],['finmois','Fin de mois','fin'],['reglages','Réglages','set']];
+var ICONS={epa:'M18 6.5A7 7 0 1 0 18 17.5M4 10h10M4 14h10',home:'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',dep:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',adv:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM16 8l-2 6-6 2 2-6z',obj:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',env:'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z',crm:'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',fin:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',set:'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'};
+var VIEWS=[['home','Accueil','home'],['depenses','Dépenses','dep'],['epargne','Épargne','epa'],['conseiller','Conseiller','adv'],['objectifs','Objectifs','obj'],['envies','Envies','env'],['crm','Suivi','crm'],['finmois','Fin de mois','fin'],['reglages','Réglages','set']];
 var CAT_COL={alimentation:'#6c9bff',essence:'#f6bf4a',abonnements:'#c4a4ff',loisirs:'#35d0b0',sorties:'#ff8fb1',"achats en ligne":'#ff9d5c',"santé":'#5cd6ff',cadeaux:'#a6e36e',autres:'#9aa6bd',epargne:'#34d3c0'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function fdate(s){return new Date(parseD(s)).toLocaleDateString('fr-FR',{day:'numeric',month:'short',timeZone:'UTC'})}
@@ -508,15 +508,27 @@ function commit(){save();render()}
 function renderNav(){
   if(!state.onboarded){$('#toptabs').innerHTML='';$('#bnav').innerHTML='';return}
   $('#toptabs').innerHTML=VIEWS.map(function(v){return '<button data-a="nav" data-v="'+v[0]+'"'+(ui.view===v[0]?' aria-current="page"':'')+'>'+v[1]+'</button>'}).join('');
-  var B=[['home','Accueil','home'],['depenses','Dépenses','dep'],null,['conseiller','Conseiller','adv'],['objectifs','Objectifs','obj']];
+  var B=[['home','Accueil','home'],['depenses','Dépenses','dep'],null,['epargne','Épargne','epa'],['objectifs','Objectifs','obj']];
   $('#bnav').innerHTML=B.map(function(b){return b?'<button data-a="nav" data-v="'+b[0]+'"'+(ui.view===b[0]?' aria-current="page"':'')+'>'+ic(b[2])+'<span>'+b[1]+'</span></button>':'<button class="plus" data-a="openExpense" aria-label="Ajouter une dépense"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>'}).join('');
+}
+function vEpargne(c){
+  var st=state.settings,epObj=st.epargneIdeale>0?st.epargneIdeale:st.epargneProtegee;
+  var h='<div class="row between" style="margin:6px 0 12px"><h2 style="margin:0">Épargne</h2></div>';
+  h+=cumulCard();
+  var reste=Math.max(0,st.epargneProtegee-c.virements);
+  var msg=st.epargneProtegee<=0?'Aucun minimum défini. Tu peux en fixer un dans Mon plan.':c.virements>=st.epargneIdeale&&st.epargneIdeale>0?'Objectif idéal atteint ce mois-ci. Bravo.':c.virements>=st.epargneProtegee?'Minimum atteint. Il manque '+eur(Math.max(0,st.epargneIdeale-c.virements))+' pour l\'idéal.':'Il reste '+eur(reste)+' à mettre de côté pour atteindre ton minimum.';
+  h+='<div class="card" style="margin-bottom:12px"><div class="card-h"><h3>Ce mois-ci</h3><span class="chip">'+eur(c.virements)+' / '+eur(epObj)+'</span></div>'+bar(epObj>0?c.virements/epObj:0,'save')+'<div class="small muted" style="margin-top:10px">'+msg+'</div><div class="row" style="margin-top:12px"><button class="btn primary sm" data-a="openEpargne">J\'ai mis de l\'argent de côté</button></div></div>';
+  var bl=state.bilans.slice().reverse();
+  h+='<h3 style="margin:16px 2px 10px">Mois précédents</h3>';
+  h+=bl.length?'<div class="stack">'+bl.map(function(b){return '<div class="card"><div class="row between"><div><div class="label">'+fdate(b.debut)+' → '+fdate(b.fin)+'</div><div class="mid num" style="color:var(--save)">'+eur(b.epargne)+'</div></div><span class="status '+(b.atteint?'ok':'pending')+'">'+(b.atteint?'Objectif atteint':'Objectif manqué')+'</span></div></div>'}).join('')+'</div>':'<div class="card empty">Pas encore de mois terminé. Le premier apparaît quand tu démarres ton deuxième mois.</div>';
+  return h;
 }
 function render(){
   if(state.onboarded){if(ensureFixes()|autoPay())save()}else if(ui.view!=='plan')ui.view='plan';
   document.body.classList.toggle('onb-off',!state.onboarded);
   renderNav();
   var c=calc(state,todayStr());
-  var fn={plan:vPlan,home:vHome,depenses:vDepenses,conseiller:vConseiller,objectifs:vObjectifs,envies:vEnvies,crm:vCrm,finmois:vFinMois,reglages:vReglages}[ui.view];
+  var fn={plan:vPlan,home:vHome,depenses:vDepenses,epargne:vEpargne,conseiller:vConseiller,objectifs:vObjectifs,envies:vEnvies,crm:vCrm,finmois:vFinMois,reglages:vReglages}[ui.view];
   $('#main').innerHTML=fn(c);
   $('#bell-dot').hidden=!c.alerts.some(function(a){return a.l!=='info'&&a.l!=='good'});
   if(ui.view==='home')bindChart();
@@ -791,6 +803,7 @@ function vCrm(c){
     h+='<div class="card hero" style="margin-bottom:12px"><div class="label">Argent économisé grâce aux achats refusés</div><div class="big num" style="color:var(--save)">'+eur(tr)+'</div><div class="small muted">'+refus.length+' achat'+(refus.length>1?'s':'')+' évité'+(refus.length>1?'s':'')+'</div></div><div class="card"><div class="list">'+(refus.length?refus.slice().sort(function(a,b){return a.date<b.date?1:-1}).map(function(d){return '<div class="item"><div class="grow"><div class="t">'+esc(d.nom)+'</div><div class="small muted">'+fdate(d.date)+'</div></div><div class="amt num" style="color:var(--save)">'+eur(d.prix)+'</div><button class="btn sm" data-a="toGoal" data-id="'+d.id+'">Mettre de côté</button></div>'}).join(''):'<div class="empty">Aucun achat refusé pour l\'instant.</div>')+'</div></div>';
   }else if(ui.crmTab==='bilans'){
     var bl=state.bilans.slice().reverse();
+    h+=cumulCard();
     h+=bl.length?'<div class="stack">'+bl.map(function(b){return '<div class="card"><div class="row between"><h3>'+fdate(b.debut)+' → '+fdate(b.fin)+'</h3><span class="status '+(b.atteint?'ok':'pending')+'">'+(b.atteint?'Objectif atteint':'Objectif manqué')+'</span></div><div class="grid g3" style="margin-top:12px"><div><div class="label">Épargné</div><div class="mid num" style="color:var(--save)">'+eur(b.epargne)+'</div><div class="small muted">minimum '+eur(b.min)+'</div></div><div><div class="label">Dépensé</div><div class="mid num">'+eur(b.depense)+'</div></div><div><div class="label">Solde en fin de période</div><div class="mid num">'+eur(b.soldeFin)+'</div></div></div></div>'}).join('')+'</div>':'<div class="card empty">Aucun bilan pour l\'instant. Le premier arrive quand tu démarres ton deuxième mois.</div>';
   }else{
     var st=statsMensuelles(state);
@@ -1004,12 +1017,25 @@ A.openIncome=function(){
   var a=d.split('-').map(Number),nx=new Date(Date.UTC(a[0],a[1],1)),next=dateWithDay(nx.getUTCFullYear(),nx.getUTCMonth(),st.revenuJour||a[2]);
   openModal('<h2 style="margin-bottom:6px">Démarrer le nouveau mois</h2><p class="small muted" style="margin:0 0 12px">Bilan du mois qui se termine : <b>'+eur(c.totalPaye)+'</b> dépensés, <b>'+eur(c.virements)+'</b> épargnés '+(c.virements>=st.epargneProtegee&&st.epargneProtegee>0?'(objectif atteint).':st.epargneProtegee>0?'(minimum de '+eur(st.epargneProtegee)+' non atteint).':'.')+'</p><form data-f="income"><div class="two"><div class="field"><label for="i-m">Revenu reçu (€)</label><input id="i-m" name="montant" inputmode="decimal" required autocomplete="off" value="'+String(st.revenuMontant||'').replace('.',',')+'"></div><div class="field"><label for="i-d">Reçu le</label><input id="i-d" type="date" name="date" value="'+d+'" required></div></div><div class="field"><label for="i-s">Solde actuel du compte (€, conseillé)</label><input id="i-s" name="solde" inputmode="decimal" autocomplete="off" placeholder="Recopie ton solde bancaire"></div><div class="field"><label for="i-n">Prochain revenu prévu</label><input id="i-n" type="date" name="next" value="'+next+'" required></div><div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-a="closeModal">Annuler</button><button class="btn primary">Démarrer</button></div></form>');
 };
+function cumulData(){
+  var st=state.settings,c=calc(state,todayStr()),Y={},tot={rev:0,dep:0,ep:0,n:0};
+  function add(y,rev,dep,ep,cur){var o=Y[y]||(Y[y]={rev:0,dep:0,ep:0,n:0,cur:false});o.rev+=rev;o.dep+=dep;o.ep+=ep;o.n++;if(cur)o.cur=true;tot.rev+=rev;tot.dep+=dep;tot.ep+=ep;tot.n++}
+  state.bilans.forEach(function(b){add(String(b.fin).slice(0,4),b.revenu||0,b.depense||0,b.epargne||0,false)});
+  add(String(st.debutPeriode).slice(0,4),(typeof st.revenuPeriode==='number'?st.revenuPeriode:st.revenuMontant)||0,c.totalPaye||0,c.virements||0,true);
+  return {Y:Y,tot:tot};
+}
+function cumulCard(){
+  var d=cumulData(),ys=Object.keys(d.Y).sort().reverse();
+  var h='<div class="card" style="margin-bottom:12px"><h3>Depuis le début</h3><div class="grid g3" style="margin-top:12px"><div><div class="label">Épargné au total</div><div class="mid num" style="color:var(--save)">'+eur(d.tot.ep)+'</div></div><div><div class="label">Revenus touchés</div><div class="mid num">'+eur(d.tot.rev)+'</div></div><div><div class="label">Dépensé au total</div><div class="mid num">'+eur(d.tot.dep)+'</div></div></div><div class="small muted" style="margin-top:8px">Sur '+d.tot.n+' mois, mois en cours inclus.</div></div>';
+  h+='<div class="card scroll-x" style="margin-bottom:12px"><h3>Bilan par année</h3><table style="margin-top:10px"><thead><tr><th>Année</th><th class="r">Mois</th><th class="r">Revenus</th><th class="r">Dépensé</th><th class="r">Épargné</th></tr></thead><tbody>'+ys.map(function(y){var o=d.Y[y];return '<tr><td>'+y+'</td><td class="r num">'+o.n+'</td><td class="r num">'+(o.rev?eur(o.rev):'–')+'</td><td class="r num">'+eur(o.dep)+'</td><td class="r num" style="color:var(--save)"><b>'+eur(o.ep)+'</b></td></tr>'}).join('')+'</tbody></table><div class="small muted" style="margin-top:8px">Les revenus s\'affichent pour les mois enregistrés à partir de maintenant.</div></div>';
+  return h;
+}
 F.income=function(f){
   var st=state.settings,t=todayStr(),m=parseNum(f.montant.value),sol=parseNum(f.solde.value);
   if(!(m>=0)||f.next.value<=f.date.value){toast('Vérifie le montant et les dates');return}
   var c=calc(state,t);
-  state.bilans.push({id:uid(),debut:st.debutPeriode,fin:f.date.value,depense:c.totalPaye,epargne:c.virements,min:st.epargneProtegee,max:st.epargneIdeale,soldeFin:c.soldeReel,libreInitial:c.libreInitial,libreDepense:c.libreDepense,atteint:st.epargneProtegee>0&&c.virements>=st.epargneProtegee});
-  st.soldeDebut=r2(c.soldeReel+m);st.debutPeriode=f.date.value;st.prochainRevenu=f.next.value;st.epargneDeja=0;st.alimDeja=0;st.suiviDepuis='';
+  state.bilans.push({id:uid(),debut:st.debutPeriode,fin:f.date.value,revenu:r2((typeof st.revenuPeriode==='number'?st.revenuPeriode:st.revenuMontant)||0),depense:c.totalPaye,epargne:c.virements,min:st.epargneProtegee,max:st.epargneIdeale,soldeFin:c.soldeReel,libreInitial:c.libreInitial,libreDepense:c.libreDepense,atteint:st.epargneProtegee>0&&c.virements>=st.epargneProtegee});
+  st.revenuPeriode=r2(m||0);st.soldeDebut=r2(c.soldeReel+m);st.debutPeriode=f.date.value;st.prochainRevenu=f.next.value;st.epargneDeja=0;st.alimDeja=0;st.suiviDepuis='';
   if(m>0&&!st.revenuMontant)st.revenuMontant=m;
   ensureFixes();autoPay();
   if(isFinite(sol))setSolde(sol);
